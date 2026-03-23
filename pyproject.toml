@@ -1,16 +1,22 @@
 [tool.poetry]
-name = "pnp_diffusion"
+name = "pnp_denoising_diffusion"
 version = "0.1.0"
 description = ""
 packages = [
-    { include = "pnp_diffusion", from = "src" },
+    { include = "pnp_denoising_diffusion", from = "src" },
 ]
 authors = []
 readme = "README.md"
 
 
 [tool.poetry.dependencies]
-python = ">=3.9.21,<=3.14.12"
+python = "^3.11"
+torch = "2.2.2"
+pyaml = "^25.7.0"
+matplotlib = "^3.10.7"
+ipykernel = "^7.1.0"
+python-box = "^7.3.2"
+
 
 [build-system]
 requires = ["poetry-core"]
