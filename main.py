@@ -1,5 +1,6 @@
 """The main code. You can modify config.yaml to change the parameters to run the code"""
 
+import torch
 from torch import device
 # from pnp_denoising_diffusion.utils.score import calculate_psnr, calculate_fid   
 # import lpips
@@ -7,6 +8,8 @@ from pnp_denoising_diffusion.utils.utils import load_config, set_seed
 from pnp_denoising_diffusion.utils.load_image import load_image
 from pnp_denoising_diffusion.utils.read_image import read_and_save
 from pnp_denoising_diffusion.transform import transform_image
+from pnp_denoising_diffusion.guided_diffusion.script_util import create_model_and_diffusion
+
 
 
 
@@ -16,6 +19,14 @@ if __name__ == "__main__":
     image = load_image(config.path_to_image)  # 269 x 269 x 3
     image = image[:256, :256, :] # 256 x 256 x 3
     image_transformed = transform_image(image, config)
+    
+    # Initializing x
+    x = torch.randn((256, 256, 3))
+    model, diffusion = create_model_and_diffusion(**config.guided_diffusion)
+    model.load_state_dict(torch.load(config.model_path, map_location="cpu"))
+
+    
+
     read_and_save(image_transformed, config.path_to_save)
     
     # for img in config.test_images:
