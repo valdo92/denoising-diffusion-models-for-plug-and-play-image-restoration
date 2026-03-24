@@ -199,3 +199,6 @@ data/*
 
 model/*
 !model/.gitkeep
+
+results/*
+!results/.gitkeep

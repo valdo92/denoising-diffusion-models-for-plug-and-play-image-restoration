@@ -17,7 +17,7 @@ guidance_scale          : 1.0
 skip_type: "quad"
 
 num_train_timesteps     : 1000
-iter_num                : 20              # set number of iterations
+iter_num                : 20             # set number of iterations
 #iter_num_U              : 1                 # set number of inner iterations, default: 1
 
 

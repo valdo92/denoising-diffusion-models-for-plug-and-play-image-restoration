@@ -84,8 +84,8 @@ if __name__ == "__main__":
         rhos.append(config.lambda_*(config.sigma**2)/(sigma_ks[i]**2))            
     rhos, sigmas, sigma_ks = torch.tensor(rhos).to(device), torch.tensor(sigmas).to(device), torch.tensor(sigma_ks).to(device)
     
-    imshow(x, title='init random')
-    imshow(y, title='image transformé')
+    imshow(x, title='init random', save_path="results/init_random.png")
+    imshow(y, title='image transformé', save_path="results/Image_intiale_Transformée.png")
 
 
     print(f"--- Reverse Diffusion --- {len(seq)} ")
@@ -126,20 +126,21 @@ if __name__ == "__main__":
             #     )
             #     x = sqrt_alpha_effective * x + noise_to_add * torch.randn_like(x)
 
-        # Sauvegarde et affichage (x_0 est mis à l'échelle [0, 1])
-        x_0_output = (x / 2 + 0.5)
+        current_x0 = x0_est if 'x0_est' in locals() else x
+        x_0_progress = (current_x0 / 2 + 0.5)
 
         if (seq[i] in progress_seq):
-            x_show = x_0_output.clone().detach().cpu().numpy()       #[0,1]
+            x_show = x_0_progress.clone().detach().cpu().numpy()       #[0,1]
             x_show = np.squeeze(x_show)
             if x_show.ndim == 3:
                 x_show = np.transpose(x_show, (1, 2, 0))
-            imshow(x_show, title=f'Denoised Image {i}')
+            imshow(x_show, title=f'Denoised Image {i}', save_path=f"results/etape_{i}.png")
             progress_img.append(x_show)
         
     #recover intial ground truth image
     x[mask.to(torch.bool)] = y[mask.to(torch.bool)]
 
+    x_0_output = (x / 2 + 0.5)
     print( "--- Measurements ---")
     # ### Phase De Test
     loss_fn_vgg = lpips.LPIPS(net='vgg').to(device)
