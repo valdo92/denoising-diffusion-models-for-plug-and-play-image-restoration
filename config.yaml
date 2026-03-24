@@ -6,9 +6,25 @@ path_to_image: data/valentin.png
 path_to_save: results/piche.png
 model_path: model/256x256_diffusion_uncond.pt
 
+sigma                   : "0.001"  # noise level associated with condition y
+lambda_                 : "1."                # key parameter lambda            # use analytical solution
+eta                     : "0.0"               # eta for ddim samplingn  
+zeta                    : "1.0"                      
+guidance_scale          : "1.0"   
+
+skip_type: "quad"
+
+num_train_timesteps     : "1000"
+iter_num                : "20"              # set number of iterations
+#iter_num_U              : "1"                 # set number of inner iterations, default: 1
+
+
+# noise schedule 
+beta_start              : "0.1 / 1000"
+beta_end                : "20 / 1000"
+
 
 # Guided diffusion
-
 guided_diffusion:
 
   num_channels: 256
