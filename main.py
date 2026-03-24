@@ -38,12 +38,16 @@ if __name__ == "__main__":
     image_transformed, mask = transform_image(image, config)
     
 
-    # transfering to shape 1x3x256x256
+    # transfering to shape 1x3x256x256 and mapping to [-1, 1]
     image = torch.from_numpy(np.ascontiguousarray(image)).permute(2, 0, 1).float().unsqueeze(0).to(device)
+    image = image * 2.0 - 1.0  # [0, 1] -> [-1, 1]
+    
     mask = torch.from_numpy(np.ascontiguousarray(mask)).permute(2, 0, 1).float().unsqueeze(0).to(device)
+    
     image_transformed = torch.from_numpy(
         np.ascontiguousarray(image_transformed)
         ).permute(2, 0, 1).float().unsqueeze(0).to(device)
+    image_transformed = image_transformed * 2.0 - 1.0  # [0, 1] -> [-1, 1]
     y = image_transformed
     
     noise_level_img = 0.0 # Default value
@@ -150,15 +154,14 @@ if __name__ == "__main__":
     test_results['psnr'] = []
     test_results['fid'] = []
 
-    # Conversion correcte pour les métriques
-    x_0_uint8 = (x_0_output * 255).clamp(0, 255).to(torch.uint8)
-    image_uint8 = image.to(torch.uint8)
+    # Convert to standard formats for metrics
+    image_norm = image  # Already in [-1, 1]
     
-    img_psnr_gt = np.transpose(image.squeeze(0).cpu().numpy(), (1, 2, 0)) # [0, 255] HWC
+    # image_uint8 converts from [-1, 1] to [0, 255]
+    image_uint8 = ((image / 2 + 0.5) * 255).clamp(0, 255).to(torch.uint8)
+    
+    img_psnr_gt = np.transpose(image_uint8.squeeze(0).cpu().numpy(), (1, 2, 0)) # [0, 255] HWC
     img_psnr_est = np.transpose(x_0_uint8.squeeze(0).cpu().numpy(), (1, 2, 0)) # [0, 255] HWC
-    
-    # Image normalisée entre -1 et 1 pour LPIPS
-    image_norm = ((image / 255.0) * 2.0 - 1.0).to(device)
 
     fid_score = calculate_fid_process(x_0_uint8, image_uint8) ## tensor in range [0, 255]
     test_results['fid'].append(fid_score)
