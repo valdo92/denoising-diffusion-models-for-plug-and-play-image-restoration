@@ -8,9 +8,17 @@ def simple_diffusion_step(model, x_t, t_i, t_im1, alphas_cumprod, eta=0.0):
     alpha_bar_t = alphas_cumprod[t_i]
     alpha_bar_prev = alphas_cumprod[t_im1] if t_im1 >= 0 else torch.tensor(1.0, device=x_t.device)
     
+    # Convert timesteps to tensor if they are integers/floats
+    if not isinstance(t_i, torch.Tensor):
+        t_i_tensor = torch.tensor([t_i], device=x_t.device)
+    else:
+        t_i_tensor = t_i.view(-1).to(x_t.device)
+
     # 1. Prédiction de l'erreur
     with torch.no_grad():
-        eps_pred = model(x_t, t_i) 
+        model_out = model(x_t, t_i_tensor)
+        # Si le modèle prédit la variance, il retourne 6 canaux, on garde les 3 premiers
+        eps_pred = model_out[:, :3, :, :] if model_out.shape[1] == 6 else model_out
     
     # 2. Estimation de x_0 (Tweedie)
     sqrt_at = torch.sqrt(alpha_bar_t)
@@ -37,7 +45,13 @@ def single_diffpir_step(x, y, mask, t_i, t_im1, model_fn, rhos, sigmas, alphas_c
     # 1. Prédire le bruit (epsilon) via le modèle
     # Résolution de l'hypothèse de la prédiction directe : on suppose que model_fn prédit epsilon
     # (Si votre modèle nécessite "noise_level" ou autre, vous pouvez l'encapsuler dans model_fn)
-    eps_pred = model_fn(x, t_i) 
+    if not isinstance(t_i, torch.Tensor):
+        t_i_tensor = torch.tensor([t_i], device=x.device)
+    else:
+        t_i_tensor = t_i.view(-1).to(x.device)
+        
+    model_out = model_fn(x, t_i_tensor) 
+    eps_pred = model_out[:, :3, :, :] if model_out.shape[1] == 6 else model_out
 
     # Variables de cumul d'alphas
     alpha_bar_t = alphas_cumprod[t_i]

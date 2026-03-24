@@ -2,8 +2,8 @@
 
 import torch
 import numpy as np 
-# from pnp_denoising_diffusion.utils.score import calculate_psnr, calculate_fid   
-# import lpips
+from pnp_denoising_diffusion.utils.score import calculate_psnr, calculate_fid_process   
+import lpips
 from pnp_denoising_diffusion.utils.utils import load_config, set_seed
 from pnp_denoising_diffusion.utils import utils_model 
 from pnp_denoising_diffusion.utils.load_image import load_image
@@ -37,21 +37,25 @@ if __name__ == "__main__":
     
 
     # transfering to shape 1x3x256x256
-    image = torch.from_numpy(np.ascontiguousarray(image)).permute(2, 0, 1).float().unsqueeze(0)
-    mask = torch.from_numpy(np.ascontiguousarray(mask)).permute(2, 0, 1).float().unsqueeze(0)
+    image = torch.from_numpy(np.ascontiguousarray(image)).permute(2, 0, 1).float().unsqueeze(0).to(device)
+    mask = torch.from_numpy(np.ascontiguousarray(mask)).permute(2, 0, 1).float().unsqueeze(0).to(device)
     image_transformed = torch.from_numpy(
         np.ascontiguousarray(image_transformed)
-        ).permute(2, 0, 1).float().unsqueeze(0)
+        ).permute(2, 0, 1).float().unsqueeze(0).to(device)
     y = image_transformed
-    t_y = utils_model.find_nearest(reduced_alpha_cumprod, 2 * config.noise_level_img)
+    
+    noise_level_img = 0.0 # Default value
+    noise_model_t = 0 # Default value
+
+    t_y = utils_model.find_nearest(reduced_alpha_cumprod, 2 * noise_level_img)
     sqrt_alpha_effective = sqrt_alphas_cumprod[t_start] / sqrt_alphas_cumprod[t_y]
     x = sqrt_alpha_effective * y + torch.sqrt(sqrt_1m_alphas_cumprod[t_start]**2 - \
-                    sqrt_alpha_effective*2 * sqrt_1m_alphas_cumprod[t_y]*2) * torch.randn_like(y)
+                    sqrt_alpha_effective**2 * sqrt_1m_alphas_cumprod[t_y]**2) * torch.randn_like(y)
     
 
     model, diffusion = create_model_and_diffusion(**config.guided_diffusion)
     model.load_state_dict(torch.load(config.model_path, map_location="cpu"))
-
+    model = model.to(device)
     
     model.eval()
 
@@ -93,13 +97,13 @@ if __name__ == "__main__":
         # -------------------------------------------------------
         # SOLUTION ANALYTIQUE ET SAUT DDIM (DiffPIR)
         # -------------------------------------------------------
-        if i < (config.num_train_timesteps - config.noise_model_t):
+        if i < (config.num_train_timesteps - noise_model_t):
             x_next, x0_est = single_diffpir_step(
                 x, y, mask, t_i, t_im1, model, rhos, sigmas, alphas_cumprod, config.guidance_scale
             )
             x = x_next
         else:
-            x_next, _ = simple_diffusion_step(model, x, t_i, t_im1, config.alphas_cumprod, eta=0.0)
+            x_next, _ = simple_diffusion_step(model, x, t_i, t_im1, alphas_cumprod, eta=0.0)
             x = x_next
 
             # # -------------------------------------------------------
@@ -134,12 +138,21 @@ if __name__ == "__main__":
     test_results['psnr'] = []
     test_results['fid'] = []
 
+    # Conversion correcte pour les métriques
+    x_0_uint8 = (x_0_output * 255).clamp(0, 255).to(torch.uint8)
+    image_uint8 = image.to(torch.uint8)
+    
+    img_psnr_gt = np.transpose(image.squeeze(0).cpu().numpy(), (1, 2, 0)) # [0, 255] HWC
+    img_psnr_est = np.transpose(x_0_uint8.squeeze(0).cpu().numpy(), (1, 2, 0)) # [0, 255] HWC
+    
+    # Image normalisée entre -1 et 1 pour LPIPS
+    image_norm = (image / 255.0) * 2.0 - 1.0
 
-    fid_score = calculate_fid(x_0_output*255, image) ## tensor in range [0, 255]
+    fid_score = calculate_fid_process(x_0_uint8, image_uint8) ## tensor in range [0, 255]
     test_results['fid'].append(fid_score)
-    lpips_score = loss_fn_vgg(x_0_output.detach()*2-1, image) ## tensor in range [-1, 1]
+    lpips_score = loss_fn_vgg(x_0_output.detach()*2-1, image_norm) ## tensor in range [-1, 1]
     test_results['lpips'].append(lpips_score.item())
-    psnr_score = calculate_psnr(image.cpu().numpy(), x_0_output.cpu().numpy()) ## numpy array in range [0, 255]
+    psnr_score = calculate_psnr(img_psnr_gt, img_psnr_est) ## numpy array in range [0, 255]
     test_results['psnr'].append(psnr_score)
 
     ave_psnr = sum(test_results['psnr']) / len(test_results['psnr'])
