@@ -8,7 +8,7 @@ def transform_image(image, config):
     """
     mask = _get_mask(config) 
     image_transformed = image * mask
-    return image_transformed 
+    return image_transformed, mask
 
 def _get_mask(config):
     """

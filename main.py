@@ -1,28 +1,29 @@
 """The main code. You can modify config.yaml to change the parameters to run the code"""
 
 import torch
-from torch import device
 import numpy as np 
-from pnp_denoising_diffusion.utils.score import calculate_psnr, calculate_fid   
-import lpips
-from pnp_denoising_diffusion.utils import load_config, set_seed, create_model_and_diffusion, dif
+# from pnp_denoising_diffusion.utils.score import calculate_psnr, calculate_fid   
+# import lpips
 from pnp_denoising_diffusion.utils.utils import load_config, set_seed
+from pnp_denoising_diffusion.utils import utils_model 
 from pnp_denoising_diffusion.utils.load_image import load_image
 from pnp_denoising_diffusion.utils.read_image import read_and_save
-from pnp_denoising_diffusion.transform import transform_image, get_mask
+from pnp_denoising_diffusion.transform import transform_image 
 from pnp_denoising_diffusion.guided_diffusion.script_util import create_model_and_diffusion
-from pnp_denoising_diffusion.utils import utils_model
 from pnp_denoising_diffusion.diffusion import simple_diffusion_step, single_diffpir_step
 
 
 if __name__ == "__main__":
     config = load_config("config.yaml")
     set_seed(config.seed)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     ### PREPARATION DES PARAMETRES DE LA DIFFUSION ###
     skip = config.num_train_timesteps // config.iter_num
     betas = np.linspace(config.beta_start, config.beta_end, config.num_train_timesteps, dtype=np.float32)
     betas = torch.from_numpy(betas).to(device)
+    # Remplacement sécurisé
+    # betas = torch.linspace(config.beta_start, config.beta_end, config.num_train_timesteps, dtype=torch.float32).to(device)
     alphas = 1.0 - betas
     alphas_cumprod = np.cumprod(alphas.cpu(), axis=0)
     sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
@@ -32,19 +33,26 @@ if __name__ == "__main__":
 
     image = load_image(config.path_to_image)  # 269 x 269 x 3
     image = image[:256, :256, :] # 256 x 256 x 3
-    image_transformed = transform_image(image, config)
-    mask = get_mask(config)
-    y = image_transformed
+    image_transformed, mask = transform_image(image, config)
+    
 
-    # Initializing x
-    x = torch.randn((256, 256, 3))
+    # transfering to shape 1x3x256x256
+    image = torch.from_numpy(np.ascontiguousarray(image)).permute(2, 0, 1).float().unsqueeze(0)
+    mask = torch.from_numpy(np.ascontiguousarray(mask)).permute(2, 0, 1).float().unsqueeze(0)
+    image_transformed = torch.from_numpy(
+        np.ascontiguousarray(image_transformed)
+        ).permute(2, 0, 1).float().unsqueeze(0)
+    y = image_transformed
+    t_y = utils_model.find_nearest(reduced_alpha_cumprod, 2 * config.noise_level_img)
+    sqrt_alpha_effective = sqrt_alphas_cumprod[t_start] / sqrt_alphas_cumprod[t_y]
+    x = sqrt_alpha_effective * y + torch.sqrt(sqrt_1m_alphas_cumprod[t_start]**2 - \
+                    sqrt_alpha_effective*2 * sqrt_1m_alphas_cumprod[t_y]*2) * torch.randn_like(y)
+    
+
     model, diffusion = create_model_and_diffusion(**config.guided_diffusion)
     model.load_state_dict(torch.load(config.model_path, map_location="cpu"))
 
-    read_and_save(image_transformed, config.path_to_save)
     
-    model, diffusion = create_model_and_diffusion(config)
-    model.load_state_dict(torch.load(config.model_path, map_location="cpu"))
     model.eval()
 
     progress_img = []
@@ -87,7 +95,7 @@ if __name__ == "__main__":
         # -------------------------------------------------------
         if i < (config.num_train_timesteps - config.noise_model_t):
             x_next, x0_est = single_diffpir_step(
-                x, y, mask, t_i, t_im1, model, rhos, sigmas, config.alphas_cumprod, guidance_scale
+                x, y, mask, t_i, t_im1, model, rhos, sigmas, alphas_cumprod, config.guidance_scale
             )
             x = x_next
         else:
