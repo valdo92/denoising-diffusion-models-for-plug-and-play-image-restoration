@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import os
 
-def imshow(x, title=None, cbar=False, figsize=None, save_path=None):
+def imshow(x, title=None, cbar=False, figsize=None, save_path=None, show=True):
     # Si x est un tenseur PyTorch, on le détache et on le passe sur CPU en numpy
     if isinstance(x, torch.Tensor):
         x = x.detach().cpu().numpy()
@@ -43,4 +43,6 @@ def imshow(x, title=None, cbar=False, figsize=None, save_path=None):
         plt.savefig(save_path, bbox_inches='tight', pad_inches=0.0)
         print(f"Image sauvegardée sous : {save_path}")
         
-    plt.show()
+    if show:
+        plt.show()
+    plt.close()

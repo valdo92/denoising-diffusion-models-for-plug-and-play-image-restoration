@@ -88,8 +88,8 @@ if __name__ == "__main__":
         rhos.append(config.lambda_*(config.sigma**2)/(sigma_ks[i]**2))            
     rhos, sigmas, sigma_ks = torch.tensor(rhos).to(device), torch.tensor(sigmas).to(device), torch.tensor(sigma_ks).to(device)
     
-    imshow(x, title='init random', save_path="results/init_random.png")
-    imshow(y, title='image transformé', save_path="results/Image_intiale_Transformée.png")
+    imshow(x, title='init random', save_path="results/init_random.png", show=False)
+    imshow(y, title='image transformé', save_path="results/Image_intiale_Transformée.png", show=False)
 
 
     print(f"--- Reverse Diffusion --- {len(seq)} ")
@@ -138,7 +138,7 @@ if __name__ == "__main__":
             x_show = np.squeeze(x_show)
             if x_show.ndim == 3:
                 x_show = np.transpose(x_show, (1, 2, 0))
-            imshow(x_show, title=f'Denoised Image {i}', save_path=f"results/etape_{i}.png")
+            imshow(x_show, title=f'Denoised Image {i}', save_path=f"results/etape_{i}.png", show=False)
             progress_img.append(x_show)
         
     #recover intial ground truth image
