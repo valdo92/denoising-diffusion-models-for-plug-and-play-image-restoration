@@ -22,3 +22,16 @@ def get_params_diffusion(config):
         "t_start": t_start       
     }
     return Box(params)
+
+def transfer_model_shape(image, image_transformed, mask, device):
+    """Transfer the images to the model shape"""
+    image = torch.from_numpy(image).permute(2, 0, 1).float().unsqueeze(0).to(device)
+    image = image * 2.0 - 1.0  # [0, 1] -> [-1, 1]
+    
+    mask = torch.from_numpy(mask).permute(2, 0, 1).float().unsqueeze(0).to(device)
+    
+    image_transformed = torch.from_numpy(
+        image_transformed
+        ).permute(2, 0, 1).float().unsqueeze(0).to(device)
+    image_transformed = image_transformed * 2.0 - 1.0  # [0, 1] -> [-1, 1]
+    return image, image_transformed, mask

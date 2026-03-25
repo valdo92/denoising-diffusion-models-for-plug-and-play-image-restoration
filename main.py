@@ -13,7 +13,7 @@ from pnp_denoising_diffusion.utils.plot_image import imshow
 from pnp_denoising_diffusion.transform import transform_image 
 from pnp_denoising_diffusion.guided_diffusion.script_util import create_model_and_diffusion
 from pnp_denoising_diffusion.diffusion import simple_diffusion_step, single_diffpir_step
-from pnp_denoising_diffusion.utils.diffusion_utils import get_params_diffusion
+from pnp_denoising_diffusion.utils.diffusion_utils import get_params_diffusion, transfer_model_shape
 
 
 if __name__ == "__main__":
@@ -27,19 +27,9 @@ if __name__ == "__main__":
     
     image = load_image(config.path_to_image) # [256, 256, 3]
     image_transformed, mask = transform_image(image, config)
-    
-
-    # transfering to shape 1x3x256x256 and mapping to [-1, 1] 
-    # TODO: mettre ça dans une fonction
-    image = torch.from_numpy(image).permute(2, 0, 1).float().unsqueeze(0).to(device)
-    image = image * 2.0 - 1.0  # [0, 1] -> [-1, 1]
-    
-    mask = torch.from_numpy(mask).permute(2, 0, 1).float().unsqueeze(0).to(device)
-    
-    image_transformed = torch.from_numpy(
-        image_transformed
-        ).permute(2, 0, 1).float().unsqueeze(0).to(device)
-    image_transformed = image_transformed * 2.0 - 1.0  # [0, 1] -> [-1, 1]
+    image, image_transformed, mask = transfer_model_shape(
+        image, image_transformed, mask, config.device
+        ) 
     y = image_transformed
 
     # TODO: mettre ça dans config 
