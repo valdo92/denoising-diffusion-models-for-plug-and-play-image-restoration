@@ -5,7 +5,7 @@ import numpy as np
 import os
 import csv
 from glob import glob
-from pnp_denoising_diffusion.utils.score import calculate_psnr, calculate_fid_process   
+from torchmetrics.image.fid import FrechetInceptionDistance
 import lpips
 from pnp_denoising_diffusion.utils.utils import load_config, set_seed
 from pnp_denoising_diffusion.utils import utils_model 
@@ -32,6 +32,9 @@ if __name__ == "__main__":
     
     print("⏳ Loading the model and the weights...")
     model = load_diffusion_model(config)
+
+    # Initialize FID scorer
+    fid_scorer = FrechetInceptionDistance(feature=2048).to(device)
 
     # Initialize CSV
     with open(config.output_csv, mode='a', newline='') as f:
@@ -102,10 +105,23 @@ if __name__ == "__main__":
         
         x[mask.to(torch.bool)] = y[mask.to(torch.bool)]
 
-        metrics = run_evaluation(x, image, config, device)
+        # Run evaluation and accumulate FID features
+        metrics = run_evaluation(x, image, config, device, fid_scorer=fid_scorer)
         
         with open(config.output_csv, mode='a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([os.path.basename(img_path), f"{metrics['psnr']:.2f}", f"{metrics['lpips']:.4f}"])
 
         print(f"✅ Finish {img_path}! PSNR: {metrics['psnr']:.2f}, LPIPS: {metrics['lpips']:.4f}")
+
+    # Compute global FID score after all images are processed
+    print("\n⏳ Computing final FID score over the whole dataset...")
+    try:
+        final_fid_score = fid_scorer.compute().item()
+        print(f"🌟 Final FID Score for the dataset: {final_fid_score:.4f}")
+        # Optionally append the globally computed FID to the CSV
+        with open(config.output_csv, mode='a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['GLOBAL_FID', f"{final_fid_score:.4f}", ''])
+    except Exception as e:
+        print(f"⚠️ Could not compute FID (maybe not enough images?): {e}")
