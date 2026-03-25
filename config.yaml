@@ -4,8 +4,9 @@ noise_model_t: 0.
 noise_level_img: 0.
 
 seed: 42
-path_to_image: data/69000.png
+input_dir: data/
 name_folder_result: valentin_3
+output_csv: metrics.csv
 model_path: model/ffhq_10m.pt
 
 sigma                   : 0.001  # noise level associated with condition y
