@@ -84,7 +84,7 @@ def calculate_boundary_tv(img, mask_np):
     boundary_mask = dilated_mask - eroded_mask # 1 sur la bordure étroite, 0 ailleurs
     
     # Ramener la boundary_mask en 3 dimensions pour filtrer l'image
-    boundary_mask_3d = np.expand_dict(boundary_mask, axis=2) if mask_np.ndim == 3 else boundary_mask
+    boundary_mask_3d = np.expand_dims(boundary_mask, axis=2) if mask_np.ndim == 3 else boundary_mask
     
     img_f = img.astype(np.float32)
     # Calculer les gradients de l'image en X et Y
