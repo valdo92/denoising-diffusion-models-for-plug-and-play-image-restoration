@@ -40,7 +40,7 @@ if __name__ == "__main__":
     config.path_output_csv = "results/" + config.name_folder_result + "/" + config.output_csv
     with open(config.path_output_csv, mode='a', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['image_name', 'psnr', 'lpips'])
+        writer.writerow(['image_name', 'psnr_global', 'psnr_known', 'psnr_generated', 'boundary_tv', 'lpips'])
 
     # Read image list from text file
     with open(config.image_list_file, 'r') as f:
@@ -128,21 +128,28 @@ if __name__ == "__main__":
                save_path=f"results/{config.name_folder_result}/{img_name}_comparison.png", show=False)
 
         # Run evaluation and accumulate FID features
-        metrics = run_evaluation(x, image, config, device, fid_scorer=fid_scorer)
+        metrics = run_evaluation(x, image, mask, config, device, fid_scorer=fid_scorer)
         lpips_scores.append(metrics['lpips'])
         
         with open(config.path_output_csv, mode='a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([os.path.basename(img_path), f"{metrics['psnr']:.2f}", f"{metrics['lpips']:.4f}"])
+            writer.writerow([
+                os.path.basename(img_path), 
+                f"{metrics['psnr_global']:.2f}",
+                f"{metrics['psnr_known']:.2f}",
+                f"{metrics['psnr_generated']:.2f}",
+                f"{metrics['boundary_tv']:.2f}",
+                f"{metrics['lpips']:.4f}"
+            ])
 
-        print(f"✅ Finish {img_path}! PSNR: {metrics['psnr']:.2f}, LPIPS: {metrics['lpips']:.4f}")
+        print(f"✅ Finish {img_path}! PSNR Global: {metrics['psnr_global']:.2f} | PSNR Known: {metrics['psnr_known']:.2f} | PSNR Gen: {metrics['psnr_generated']:.2f} | TV: {metrics['boundary_tv']:.2f} | LPIPS: {metrics['lpips']:.4f}")
 
     if lpips_scores:
         mean_lpips = float(np.mean(lpips_scores))
         print(f"🌟 Mean LPIPS over the dataset: {mean_lpips:.4f}")
         with open(config.path_output_csv, mode='a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['MEAN_LPIPS', '', f"{mean_lpips:.4f}"])
+            writer.writerow(['MEAN_LPIPS', '', '', '', '', f"{mean_lpips:.4f}"])
 
     # Compute global FID score after all images are processed
     print("\n⏳ Computing final FID score over the whole dataset...")
@@ -152,6 +159,6 @@ if __name__ == "__main__":
         # Optionally append the globally computed FID to the CSV
         with open(config.path_output_csv, mode='a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['GLOBAL_FID', f"{final_fid_score:.4f}", ''])
+            writer.writerow(['GLOBAL_FID', f"{final_fid_score:.4f}", '', '', '', ''])
     except Exception as e:
         print(f"⚠️ Could not compute FID (maybe not enough images?): {e}")
