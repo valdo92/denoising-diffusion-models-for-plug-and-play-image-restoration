@@ -4,3 +4,5 @@ image_name,psnr,lpips
 69133.png,21.74,0.0914
 69037.png,24.32,0.1093
 69367.png,27.14,0.1115
+GLOBAL_FID,65.9141,
+GLOBAL_FID,65.9141,

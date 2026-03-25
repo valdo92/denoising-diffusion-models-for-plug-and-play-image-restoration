@@ -34,7 +34,7 @@ if __name__ == "__main__":
     model = load_diffusion_model(config)
 
     # Initialize FID scorer
-    fid_scorer = FrechetInceptionDistance(feature=2048).to(device)
+    fid_scorer = FrechetInceptionDistance(feature=64).to(device)
 
     # Initialize CSV
     with open(config.output_csv, mode='a', newline='') as f:
@@ -104,15 +104,16 @@ if __name__ == "__main__":
             torch.cuda.empty_cache()
         
         x[mask.to(torch.bool)] = y[mask.to(torch.bool)]
+        imshow(x, title='final_image', save_path=f"results/{config.name_folder_result}/{img_name}_final_image.png", show=False)
 
         # Run evaluation and accumulate FID features
         metrics = run_evaluation(x, image, config, device, fid_scorer=fid_scorer)
         
-        with open(config.output_csv, mode='a', newline='') as f:
+        """  with open(config.output_csv, mode='a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([os.path.basename(img_path), f"{metrics['psnr']:.2f}", f"{metrics['lpips']:.4f}"])
 
-        print(f"✅ Finish {img_path}! PSNR: {metrics['psnr']:.2f}, LPIPS: {metrics['lpips']:.4f}")
+        print(f"✅ Finish {img_path}! PSNR: {metrics['psnr']:.2f}, LPIPS: {metrics['lpips']:.4f}")"""
 
     # Compute global FID score after all images are processed
     print("\n⏳ Computing final FID score over the whole dataset...")
