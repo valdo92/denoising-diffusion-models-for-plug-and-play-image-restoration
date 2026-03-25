@@ -37,15 +37,16 @@ if __name__ == "__main__":
     print("⏳ Loading the model and the weights...")
     model = load_diffusion_model(config)
 
-    imshow(x, title='init random', save_path="results/init_random.png", show=False)
-    imshow(y, title='image transformé', save_path="results/Image_intiale_Transformée.png", show=False)
+    imshow(x, title='init random', save_path=f"results/{config.path_result}/init_random.png", show=False)
+    imshow(y, title='image transformé', save_path=f"results/{config.path_result}/Image_intiale_Transformée.png", show=False)
 
 
     print(f"--- Reverse Diffusion --- {len(params.seq)} ")
     progress_img = []
     # reverse diffusion for one image from random noise
     for i in range(len(params.seq)):
-        print(i)
+        if i % 50 == 0:
+            print(i)
         curr_sigma = params.sigmas[params.seq[i]].cpu().numpy()
         t_i = utils_model.find_nearest(params.reduced_alpha_cumprod, curr_sigma)
         
@@ -76,7 +77,7 @@ if __name__ == "__main__":
             x_show = np.squeeze(x_show)
             if x_show.ndim == 3:
                 x_show = np.transpose(x_show, (1, 2, 0))
-            imshow(x_show, title=f'Denoised Image {i}', save_path=f"results/etape_{i}.png", show=False)
+            imshow(x_show, title=f'Denoised Image {i}', save_path=f"results/{config.path_result}/etape_{i}.png", show=False)
             progress_img.append(x_show)
         torch.cuda.empty_cache()
         
