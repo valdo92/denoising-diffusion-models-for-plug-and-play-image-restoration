@@ -23,8 +23,8 @@ from pnp_denoising_diffusion.utils.diffusion_utils import (
 if __name__ == "__main__":
     print("⏳ Loading config, parameters and images...")
     config = load_config("config.yaml")
-    if os.path.exists("results/" + config.name_folder_result):
-       raise FileExistsError(f"🛑 : The folder '{config.name_folder_result}' exist, change it in config or delete the folder")
+    #if os.path.exists("results/" + config.name_folder_result):
+    #   raise FileExistsError(f"🛑 : The folder '{config.name_folder_result}' exist, change it in config or delete the folder")
     os.makedirs(f"results/{config.name_folder_result}", exist_ok=True)
     set_seed(config.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     image_paths = [os.path.join(config.image_dir, fname) for fname in image_filenames]
     lpips_scores = []
     
-    for img_path in image_paths:
+    for img_path in image_paths[:5]:
         print(f"\n--- Processing {img_path} ---")
         config.path_to_image = img_path
         
@@ -90,6 +90,7 @@ if __name__ == "__main__":
             # -------------------------------------------------------
             if i < (config.num_train_timesteps - config.noise_model_t):
                 pnp_method = config.get('pnp_method', 'hqs')
+                print(pnp_method)
                 gamma = config.get('gamma_pgd', 1.0)
                 
                 x_next, x0_est = single_diffpir_step(
@@ -142,7 +143,7 @@ if __name__ == "__main__":
                 f"{metrics['lpips']:.4f}"
             ])
 
-        print(f"✅ Finish {img_path}! PSNR Global: {metrics['psnr_global']:.2f} | PSNR Known: {metrics['psnr_known']:.2f} | PSNR Gen: {metrics['psnr_generated']:.2f} | TV: {metrics['boundary_tv']:.2f} | LPIPS: {metrics['lpips']:.4f}")
+        print(f"✅ Finish {img_path} for {config.pnp_method}! PSNR Global: {metrics['psnr_global']:.2f} | PSNR Known: {metrics['psnr_known']:.2f} | PSNR Gen: {metrics['psnr_generated']:.2f} | TV: {metrics['boundary_tv']:.2f} | LPIPS: {metrics['lpips']:.4f}")
 
     if lpips_scores:
         mean_lpips = float(np.mean(lpips_scores))
