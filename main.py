@@ -101,7 +101,7 @@ if __name__ == "__main__":
             torch.cuda.empty_cache()
         
         x[mask.to(torch.bool)] = y[mask.to(torch.bool)]
-
+        imshow(x, title='final_image', save_path=f"results/{config.name_folder_result}/{img_name}_final_image.png", show=False)
         metrics = run_evaluation(x, image, config, device)
         
         with open(config.output_csv, mode='a', newline='') as f:
