@@ -19,6 +19,7 @@ lpips = "^0.1.4"
 torchmetrics = "^1.9.0"
 numpy = "^2.4.3"
 opencv-python-headless = "^4.13.0.92"
+torch-fidelity = "^0.4.0"
 
 [build-system]
 requires = ["poetry-core"]
