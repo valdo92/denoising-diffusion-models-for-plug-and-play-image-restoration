@@ -52,7 +52,7 @@ if __name__ == "__main__":
     x = sqrt_alpha_effective * y + torch.sqrt(params.sqrt_1m_alphas_cumprod[params.t_start]**2 - \
                     sqrt_alpha_effective**2 * params.sqrt_1m_alphas_cumprod[t_y]**2) * torch.randn_like(y)
     
-
+    print("⏳ Loading the model and the weights...")
     model, diffusion = create_model_and_diffusion(**config.guided_diffusion)
     model.load_state_dict(torch.load(config.model_path, map_location="cpu"))
     model = model.to(device)
@@ -101,11 +101,11 @@ if __name__ == "__main__":
         # -------------------------------------------------------
         if i < (config.num_train_timesteps - noise_model_t):
             x_next, x0_est = single_diffpir_step(
-                x, y, mask, t_i, t_im1, model, rhos, sigmas, alphas_cumprod, config.guidance_scale
+                x, y, mask, t_i, t_im1, model, rhos, sigmas, params.alphas_cumprod, config.guidance_scale
             )
             x = x_next
         else:
-            x_next, _ = simple_diffusion_step(model, x, t_i, t_im1, alphas_cumprod, eta=0.0)
+            x_next, _ = simple_diffusion_step(model, x, t_i, t_im1, params.alphas_cumprod, eta=0.0)
             x = x_next
 
         current_x0 = x0_est if 'x0_est' in locals() else x
