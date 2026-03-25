@@ -55,7 +55,7 @@ def initialize_x(params, config, y):
 
 def load_diffusion_model(config):
     """Load the diffusion model from open ai"""
-    create_model_and_diffusion(**config.guided_diffusion)
+    model, _ = create_model_and_diffusion(**config.guided_diffusion)
     model.load_state_dict(torch.load(config.model_path, map_location="cpu"))
     model = model.to(config.device)
     model.eval()

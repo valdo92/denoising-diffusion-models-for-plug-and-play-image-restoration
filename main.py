@@ -82,7 +82,7 @@ if __name__ == "__main__":
         # -------------------------------------------------------
         if i < (config.num_train_timesteps - config.noise_model_t):
             x_next, x0_est = single_diffpir_step(
-                x, y, mask, t_i, t_im1, model, rhos, sigmas, params.alphas_cumprod, config.guidance_scale
+                x, y, mask, t_i, t_im1, model, rhos, sigmas, params.alphas_cumprod, config.guidance_scale, zeta = config.zeta
             )
             x = x_next
         else:
