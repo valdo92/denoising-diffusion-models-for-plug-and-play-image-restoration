@@ -1,8 +1,8 @@
 """The main code. You can modify config.yaml to change the parameters to run the code"""
 
 import torch
-import numpy as np 
-import cv2
+import numpy as np
+import os
 from pnp_denoising_diffusion.utils.score import calculate_psnr, calculate_fid_process   
 import lpips
 from pnp_denoising_diffusion.utils.utils import load_config, set_seed
@@ -11,7 +11,6 @@ from pnp_denoising_diffusion.utils.load_image import load_image
 from pnp_denoising_diffusion.utils.read_image import read_and_save
 from pnp_denoising_diffusion.utils.plot_image import imshow
 from pnp_denoising_diffusion.transform import transform_image 
-from pnp_denoising_diffusion.guided_diffusion.script_util import create_model_and_diffusion
 from pnp_denoising_diffusion.diffusion import simple_diffusion_step, single_diffpir_step
 from pnp_denoising_diffusion.utils.diffusion_utils import (
     get_params_diffusion, transfer_model_shape, initialize_x, load_diffusion_model
@@ -21,6 +20,9 @@ from pnp_denoising_diffusion.utils.diffusion_utils import (
 if __name__ == "__main__":
     print("⏳ Loading config, parameters and images...")
     config = load_config("config.yaml")
+    if os.path.exists(config.name_folder_result):
+        raise FileExistsError(f"🛑 : The folder '{config.name_folder_result}' exist, change it in config or delete the folder")
+    os.makedirs(config.name_folder_result)
     set_seed(config.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     config.device = device
@@ -30,23 +32,22 @@ if __name__ == "__main__":
     image_transformed, mask = transform_image(image, config)
     image, image_transformed, mask = transfer_model_shape(
         image, image_transformed, mask, config.device
-        ) 
+        )
     y = image_transformed
     x = initialize_x(params, config, y)
 
     print("⏳ Loading the model and the weights...")
     model = load_diffusion_model(config)
 
-    imshow(x, title='init random', save_path=f"results/{config.path_result}/init_random.png", show=False)
-    imshow(y, title='image transformé', save_path=f"results/{config.path_result}/Image_intiale_Transformée.png", show=False)
-
+    imshow(x, title='init random', save_path=f"results/{config.name_folder_result}/init_random.png", show=False)
+    imshow(y, title='image transformé', save_path=f"results/{config.name_folder_result}/Image_intiale_Transformée.png", show=False)
 
     print(f"--- Reverse Diffusion --- {len(params.seq)} ")
     progress_img = []
     # reverse diffusion for one image from random noise
     for i in range(len(params.seq)):
         if i % 50 == 0:
-            print(i)
+            print(f"Step {i}")
         curr_sigma = params.sigmas[params.seq[i]].cpu().numpy()
         t_i = utils_model.find_nearest(params.reduced_alpha_cumprod, curr_sigma)
         
@@ -77,7 +78,7 @@ if __name__ == "__main__":
             x_show = np.squeeze(x_show)
             if x_show.ndim == 3:
                 x_show = np.transpose(x_show, (1, 2, 0))
-            imshow(x_show, title=f'Denoised Image {i}', save_path=f"results/{config.path_result}/etape_{i}.png", show=False)
+            imshow(x_show, title=f'Denoised Image {i}', save_path=f"results/{config.name_folder_result}/etape_{i}.png", show=False)
             progress_img.append(x_show)
         torch.cuda.empty_cache()
         

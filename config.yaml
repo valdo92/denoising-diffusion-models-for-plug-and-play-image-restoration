@@ -5,7 +5,7 @@ noise_level_img: 0.
 
 seed: 42
 path_to_image: data/valentin_3.png
-path_to_save: results/piche.png
+name_folder_result: valentin_3
 model_path: model/ffhq_10m.pt
 
 sigma                   : 0.001  # noise level associated with condition y
