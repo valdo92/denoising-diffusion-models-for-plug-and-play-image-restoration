@@ -12,27 +12,18 @@ from pnp_denoising_diffusion.utils.plot_image import imshow
 from pnp_denoising_diffusion.transform import transform_image 
 from pnp_denoising_diffusion.guided_diffusion.script_util import create_model_and_diffusion
 from pnp_denoising_diffusion.diffusion import simple_diffusion_step, single_diffpir_step
+from pnp_denoising_diffusion.utils.diffusion_utils import get_params_diffusion
 
 
 if __name__ == "__main__":
+    print("⏳ Loading config and parameters...")
     config = load_config("config.yaml")
     set_seed(config.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    config.device = device
 
     print("--- Parameters ---")
-    # TODO: mettre ça dans une fonction
-    ### PREPARATION DES PARAMETRES DE LA DIFFUSION ###
-    skip = config.num_train_timesteps // config.iter_num
-    betas = np.linspace(config.beta_start, config.beta_end, config.num_train_timesteps, dtype=np.float32)
-    betas = torch.from_numpy(betas).to(device)
-    # Remplacement sécurisé
-    # betas = torch.linspace(config.beta_start, config.beta_end, config.num_train_timesteps, dtype=torch.float32).to(device)
-    alphas = 1.0 - betas
-    alphas_cumprod = np.cumprod(alphas.cpu(), axis=0)
-    sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
-    sqrt_1m_alphas_cumprod = torch.sqrt(1. - alphas_cumprod)
-    reduced_alpha_cumprod = torch.div(sqrt_1m_alphas_cumprod, sqrt_alphas_cumprod)  
-    t_start = config.num_train_timesteps - 1 
+    params = get_params_diffusion(config)
 
     image = load_image(config.path_to_image)  # 269 x 269 x 3
     image = image[:256, :256, :] # 256 x 256 x 3
@@ -56,10 +47,10 @@ if __name__ == "__main__":
     noise_level_img = 0.0 # Default value
     noise_model_t = 0 # Default value
 
-    t_y = utils_model.find_nearest(reduced_alpha_cumprod, 2 * noise_level_img) # Qu'est ce que fait ce truc ?
-    sqrt_alpha_effective = sqrt_alphas_cumprod[t_start] / sqrt_alphas_cumprod[t_y]
-    x = sqrt_alpha_effective * y + torch.sqrt(sqrt_1m_alphas_cumprod[t_start]**2 - \
-                    sqrt_alpha_effective**2 * sqrt_1m_alphas_cumprod[t_y]**2) * torch.randn_like(y)
+    t_y = utils_model.find_nearest(params.reduced_alpha_cumprod, 2 * noise_level_img) # Qu'est ce que fait ce truc ?
+    sqrt_alpha_effective = params.sqrt_alphas_cumprod[params.t_start] / params.sqrt_alphas_cumprod[t_y]
+    x = sqrt_alpha_effective * y + torch.sqrt(params.sqrt_1m_alphas_cumprod[params.t_start]**2 - \
+                    sqrt_alpha_effective**2 * params.sqrt_1m_alphas_cumprod[t_y]**2) * torch.randn_like(y)
     
 
     model, diffusion = create_model_and_diffusion(**config.guided_diffusion)
@@ -82,8 +73,8 @@ if __name__ == "__main__":
     sigma_ks = []
     rhos = []
     for i in range(config.num_train_timesteps):
-        sigmas.append(reduced_alpha_cumprod[config.num_train_timesteps-1-i])
-        sigma_ks.append((sqrt_1m_alphas_cumprod[i]/sqrt_alphas_cumprod[i]))
+        sigmas.append(params.reduced_alpha_cumprod[config.num_train_timesteps-1-i])
+        sigma_ks.append((params.sqrt_1m_alphas_cumprod[i]/params.sqrt_alphas_cumprod[i]))
         rhos.append(config.lambda_*(config.sigma**2)/(sigma_ks[i]**2))            
     rhos, sigmas, sigma_ks = torch.tensor(rhos).to(device), torch.tensor(sigmas).to(device), torch.tensor(sigma_ks).to(device)
     
@@ -96,14 +87,14 @@ if __name__ == "__main__":
     for i in range(len(seq)):
         print(i)
         curr_sigma = sigmas[seq[i]].cpu().numpy()
-        t_i = utils_model.find_nearest(reduced_alpha_cumprod, curr_sigma)
+        t_i = utils_model.find_nearest(params.reduced_alpha_cumprod, curr_sigma)
         
         # skip iters
-        if t_i > t_start:
+        if t_i > params.t_start:
             continue
 
         # Déterminer le prochain timestep pour le saut DDIM
-        t_im1 = utils_model.find_nearest(reduced_alpha_cumprod, sigmas[seq[min(i+1, len(seq)-1)]].cpu().numpy())
+        t_im1 = utils_model.find_nearest(params.reduced_alpha_cumprod, sigmas[seq[min(i+1, len(seq)-1)]].cpu().numpy())
 
         # -------------------------------------------------------
         # SOLUTION ANALYTIQUE ET SAUT DDIM (DiffPIR)

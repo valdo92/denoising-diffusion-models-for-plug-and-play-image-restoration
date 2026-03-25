@@ -1,0 +1,24 @@
+"""Utils functions for the diffusion process"""
+from box import Box
+import torch
+import numpy as np
+
+def get_params_diffusion(config):
+    """return the params for the diffusion"""
+    skip = config.num_train_timesteps // config.iter_num
+    betas = np.linspace(config.beta_start, config.beta_end, config.num_train_timesteps, dtype=np.float32)
+    betas = torch.from_numpy(betas).to(config.device)
+    alphas = 1.0 - betas
+    alphas_cumprod = np.cumprod(alphas.cpu(), axis=0)
+    sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
+    sqrt_1m_alphas_cumprod = torch.sqrt(1. - alphas_cumprod)
+    reduced_alpha_cumprod = torch.div(sqrt_1m_alphas_cumprod, sqrt_alphas_cumprod)  
+    t_start = config.num_train_timesteps - 1 
+    params = {
+        "alphas_cumprod": alphas_cumprod,
+        "sqrt_alphas_cumprod": sqrt_alphas_cumprod,
+        "sqrt_1m_alphas_cumprod": sqrt_1m_alphas_cumprod,
+        "reduced_alpha_cumprod": reduced_alpha_cumprod,
+        "t_start": t_start       
+    }
+    return Box(params)
