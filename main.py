@@ -23,8 +23,8 @@ from pnp_denoising_diffusion.utils.diffusion_utils import (
 if __name__ == "__main__":
     print("⏳ Loading config, parameters and images...")
     config = load_config("config.yaml")
-    #if os.path.exists("results/" + config.name_folder_result):
-    #    raise FileExistsError(f"🛑 : The folder '{config.name_folder_result}' exist, change it in config or delete the folder")
+    if os.path.exists("results/" + config.name_folder_result):
+       raise FileExistsError(f"🛑 : The folder '{config.name_folder_result}' exist, change it in config or delete the folder")
     os.makedirs(f"results/{config.name_folder_result}", exist_ok=True)
     set_seed(config.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -34,10 +34,11 @@ if __name__ == "__main__":
     model = load_diffusion_model(config)
 
     # Initialize FID scorer
-    fid_scorer = FrechetInceptionDistance(feature=64).to(device)
+    fid_scorer = FrechetInceptionDistance(feature=config.feature).to(device)
 
     # Initialize CSV
-    with open(config.output_csv, mode='a', newline='') as f:
+    config.path_output_csv = "results/" + config.name_folder_result + "/" + config.output_csv
+    with open(config.path_output_csv, mode='a', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['image_name', 'psnr', 'lpips'])
 
@@ -46,6 +47,7 @@ if __name__ == "__main__":
         image_filenames = [line.strip() for line in f if line.strip()]
         
     image_paths = [os.path.join(config.image_dir, fname) for fname in image_filenames]
+    lpips_scores = []
     
     for img_path in image_paths:
         print(f"\n--- Processing {img_path} ---")
@@ -106,18 +108,37 @@ if __name__ == "__main__":
                 #imshow(x_show, title=f'Denoised Image {i}', save_path=f"results/{config.name_folder_result}/{img_name}_etape_{i}.png", show=False)
                 progress_img.append(x_show)
             torch.cuda.empty_cache()
-        
+
         x[mask.to(torch.bool)] = y[mask.to(torch.bool)]
         imshow(x, title='final_image', save_path=f"results/{config.name_folder_result}/{img_name}_final_image.png", show=False)
+        y_vis = (y / 2 + 0.5).clamp(0, 1).squeeze().cpu().numpy().transpose(1, 2, 0)
+        x_vis = (x / 2 + 0.5).clamp(0, 1).squeeze().cpu().numpy().transpose(1, 2, 0)
+        image_vis = (image / 2 + 0.5).clamp(0, 1).squeeze().cpu().numpy().transpose(1, 2, 0)
+
+        composite = np.concatenate([
+            y_vis,
+            x_vis,
+            image_vis
+        ], axis=1)
+        imshow(composite, title='Comparison: Transformed | Denoised | Original', 
+               save_path=f"results/{config.name_folder_result}/{img_name}_comparison.png", show=False)
 
         # Run evaluation and accumulate FID features
         metrics = run_evaluation(x, image, config, device, fid_scorer=fid_scorer)
+        lpips_scores.append(metrics['lpips'])
         
-        with open(config.output_csv, mode='a', newline='') as f:
+        with open(config.path_output_csv, mode='a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([os.path.basename(img_path), f"{metrics['psnr']:.2f}", f"{metrics['lpips']:.4f}"])
 
         print(f"✅ Finish {img_path}! PSNR: {metrics['psnr']:.2f}, LPIPS: {metrics['lpips']:.4f}")
+
+    if lpips_scores:
+        mean_lpips = float(np.mean(lpips_scores))
+        print(f"🌟 Mean LPIPS over the dataset: {mean_lpips:.4f}")
+        with open(config.path_output_csv, mode='a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['MEAN_LPIPS', '', f"{mean_lpips:.4f}"])
 
     # Compute global FID score after all images are processed
     print("\n⏳ Computing final FID score over the whole dataset...")
@@ -125,7 +146,7 @@ if __name__ == "__main__":
         final_fid_score = fid_scorer.compute().item()
         print(f"🌟 Final FID Score for the dataset: {final_fid_score:.4f}")
         # Optionally append the globally computed FID to the CSV
-        with open(config.output_csv, mode='a', newline='') as f:
+        with open(config.path_output_csv, mode='a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(['GLOBAL_FID', f"{final_fid_score:.4f}", ''])
     except Exception as e:
