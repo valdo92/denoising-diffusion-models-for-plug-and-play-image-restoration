@@ -21,9 +21,9 @@ from pnp_denoising_diffusion.utils.diffusion_utils import (
 if __name__ == "__main__":
     print("⏳ Loading config, parameters and images...")
     config = load_config("config.yaml")
-    if os.path.exists(config.name_folder_result):
-        raise FileExistsError(f"🛑 : The folder '{config.name_folder_result}' exist, change it in config or delete the folder")
-    os.makedirs(config.name_folder_result)
+    #if os.path.exists("results/" + config.name_folder_result):
+    #    raise FileExistsError(f"🛑 : The folder '{config.name_folder_result}' exist, change it in config or delete the folder")
+    #os.makedirs("results/" + config.name_folder_result)
     set_seed(config.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     config.device = device
@@ -87,5 +87,5 @@ if __name__ == "__main__":
     x[mask.to(torch.bool)] = y[mask.to(torch.bool)]
 
     metrics = run_evaluation(x, image, config, device)
-    
+
     print(f"✅ Finish ! PSNR: {metrics['psnr']:.2f}, LPIPS: {metrics['lpips']:.4f}")

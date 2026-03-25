@@ -7,7 +7,8 @@ from pnp_denoising_diffusion.guided_diffusion.script_util import create_model_an
 import lpips
 from pnp_denoising_diffusion.utils.score import calculate_psnr, calculate_fid_process
 from pnp_denoising_diffusion.utils.read_image import read_and_save
-
+import os
+import csv
 
 def get_params_diffusion(config):
     """return the params for the diffusion"""
@@ -112,9 +113,19 @@ def run_evaluation(x_final, image_gt, config, device):
     del loss_fn_vgg
 
     fid_score = calculate_fid_process(img_est_uint8, img_gt_uint8)
-
-    read_and_save(img_psnr_est, config.path_to_save)
-
+    
+    image_name = os.path.basename(config.path_to_image)
+    metrics_file = "results/metrics.csv"
+    os.makedirs(os.path.dirname(metrics_file), exist_ok=True)
+    file_exists = os.path.isfile(metrics_file)
+    
+    with open(metrics_file, mode='a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["image_name", "PSNR", "LPIPS", "FID"])
+        writer.writerow([image_name, round(psnr_score, 4), round(lpips_score, 4), round(fid_score, 4)])
+    print(f"Metrics appended to {metrics_file}")
+    
     return {
         "psnr": psnr_score,
         "lpips": lpips_score,

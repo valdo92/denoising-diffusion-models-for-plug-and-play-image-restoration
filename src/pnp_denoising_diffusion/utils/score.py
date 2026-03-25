@@ -2,13 +2,16 @@ import math
 import numpy as np
 import torch 
 import cv2
-#from torchmetrics.image.fid import FrechetInceptionDistance
+from torchmetrics.image.fid import FrechetInceptionDistance
 
 def calculate_fid_process(denoised_images, ground_truth_images):
     """
     Calcule le FID entre les images débruitées et les images de référence.
     denoised_images & ground_truth_images: Tenseurs (B, C, H, W) type uint8
     """
+    if denoised_images.shape[0] < 2:
+        denoised_images = denoised_images.repeat(2, 1, 1, 1)
+        ground_truth_images = ground_truth_images.repeat(2, 1, 1, 1)
     # Initialisation (feature=2048 est le standard pour Inception-v3)
     fid = FrechetInceptionDistance(feature=2048).to(denoised_images.device)
 

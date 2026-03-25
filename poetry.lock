@@ -2116,6 +2116,25 @@ opt-einsum = ["opt-einsum (>=3.3)"]
 optree = ["optree (>=0.13.0)"]
 
 [[package]]
+name = "torch-fidelity"
+version = "0.4.0"
+description = "High-fidelity performance metrics for generative models in PyTorch"
+optional = false
+python-versions = ">=3.6"
+groups = ["main"]
+files = [
+    {file = "torch_fidelity-0.4.0-py3-none-any.whl", hash = "sha256:99f4c610ea16972628eceb26afb0008e528da2d44123db947b408750efbd35d4"},
+    {file = "torch_fidelity-0.4.0.tar.gz", hash = "sha256:73548b97f1a844cb94dee7736c8485cbf1e5ae43670679f62ffb7bbb8bb3d455"},
+]
+
+[package.dependencies]
+numpy = "*"
+pillow = "*"
+torch = "*"
+torchvision = "*"
+tqdm = "*"
+
+[[package]]
 name = "torchmetrics"
 version = "1.9.0"
 description = "PyTorch native Metrics"
@@ -2299,4 +2318,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "f5633b04b391fa837dbe2394109a246e56f0e0ebea136c278d58d8b98bfa535d"
+content-hash = "9094b406f931a679730bc1041cd81c224f65e503a2a7901f6184d05cecd47c5e"

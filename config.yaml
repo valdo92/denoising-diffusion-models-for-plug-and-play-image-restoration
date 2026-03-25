@@ -4,7 +4,7 @@ noise_model_t: 0.
 noise_level_img: 0.
 
 seed: 42
-path_to_image: data/valentin_3.png
+path_to_image: data/69000.png
 name_folder_result: valentin_3
 model_path: model/ffhq_10m.pt
 
@@ -15,7 +15,7 @@ zeta                    : 1.0
 guidance_scale          : 1.0   
 
 num_train_timesteps     : 1000
-iter_num                : 1000             # set number of iterations
+iter_num                : 100             # set number of iterations
 
 
 # noise schedule 
