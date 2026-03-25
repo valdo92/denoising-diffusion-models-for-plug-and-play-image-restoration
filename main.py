@@ -113,11 +113,11 @@ if __name__ == "__main__":
         # Run evaluation and accumulate FID features
         metrics = run_evaluation(x, image, config, device, fid_scorer=fid_scorer)
         
-        """  with open(config.output_csv, mode='a', newline='') as f:
+        with open(config.output_csv, mode='a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([os.path.basename(img_path), f"{metrics['psnr']:.2f}", f"{metrics['lpips']:.4f}"])
 
-        print(f"✅ Finish {img_path}! PSNR: {metrics['psnr']:.2f}, LPIPS: {metrics['lpips']:.4f}")"""
+        print(f"✅ Finish {img_path}! PSNR: {metrics['psnr']:.2f}, LPIPS: {metrics['lpips']:.4f}")
 
     # Compute global FID score after all images are processed
     print("\n⏳ Computing final FID score over the whole dataset...")
