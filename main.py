@@ -26,21 +26,6 @@ if __name__ == "__main__":
     params = get_params_diffusion(config)
     
     image = load_image(config.path_to_image) # [256, 256, 3]
-
-    image = load_image(config.path_to_image)  # [H, W, 3]
-    h, w = image.shape[:2]
-    
-    # Downsample si l'image est trop grande (> 512)
-    if h > 512 or w > 512:
-        scale = 256 / min(h, w)
-        new_h, new_w = int(h * scale), int(w * scale)
-        image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
-        h, w = new_h, new_w
-        
-    # Center crop au lieu d'un crop en haut à gauche pour garder le sujet centré
-    y_start = max(0, (h - 256) // 2)
-    x_start = max(0, (w - 256) // 2)
-    image = image[y_start:y_start+256, x_start:x_start+256, :]
     image_transformed, mask = transform_image(image, config)
     
 
