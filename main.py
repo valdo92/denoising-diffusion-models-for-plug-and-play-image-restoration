@@ -56,7 +56,7 @@ if __name__ == "__main__":
     noise_level_img = 0.0 # Default value
     noise_model_t = 0 # Default value
 
-    t_y = utils_model.find_nearest(reduced_alpha_cumprod, 2 * noise_level_img)
+    t_y = utils_model.find_nearest(reduced_alpha_cumprod, 2 * noise_level_img) # Qu'est ce que fait ce truc ?
     sqrt_alpha_effective = sqrt_alphas_cumprod[t_start] / sqrt_alphas_cumprod[t_y]
     x = sqrt_alpha_effective * y + torch.sqrt(sqrt_1m_alphas_cumprod[t_start]**2 - \
                     sqrt_alpha_effective**2 * sqrt_1m_alphas_cumprod[t_y]**2) * torch.randn_like(y)
@@ -66,17 +66,14 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(config.model_path, map_location="cpu"))
     model = model.to(device)
     model.eval()
+    
+    # TODO: peut être que l'on peut garder uniquement un config.skip_type ici non ?
 
     progress_img = []
     # create sequence of timestep for sampling
-    if config.skip_type == 'uniform':
-        seq = [i*skip for i in range(config.iter_num)]
-        if skip > 1:
-            seq.append(config.num_train_timesteps-1)
-    elif config.skip_type == "quad":
-        seq = np.sqrt(np.linspace(0, config.num_train_timesteps**2, config.iter_num))
-        seq = [int(s) for s in list(seq)]
-        seq[-1] = seq[-1] - 1
+    seq = np.sqrt(np.linspace(0, config.num_train_timesteps**2, config.iter_num))
+    seq = [int(s) for s in list(seq)]
+    seq[-1] = seq[-1] - 1
     progress_seq = seq[::(len(seq)//10)]
     progress_seq.append(seq[-1])
 
@@ -119,18 +116,6 @@ if __name__ == "__main__":
         else:
             x_next, _ = simple_diffusion_step(model, x, t_i, t_im1, alphas_cumprod, eta=0.0)
             x = x_next
-
-            # # -------------------------------------------------------
-            # # STEP 4: RE-BRUITAGE (Si itérations U > 1)
-            # # -------------------------------------------------------
-            # # Si on n'est pas à la dernière itération interne, on "remonte" le bruit
-            # if u < config.iter_num_U - 1 and seq[i] != seq[-1]:
-            #     # On utilise le ratio d'alphas pour rajouter la dose exacte de bruit
-            #     sqrt_alpha_effective = torch.sqrt(config.alphas_cumprod[t_i] / config.alphas_cumprod[t_im1])
-            #     noise_to_add = torch.sqrt(
-            #         (1 - config.alphas_cumprod[t_i]) - (sqrt_alpha_effective**2 * (1 - config.alphas_cumprod[t_im1]))
-            #     )
-            #     x = sqrt_alpha_effective * x + noise_to_add * torch.randn_like(x)
 
         current_x0 = x0_est if 'x0_est' in locals() else x
         x_0_progress = (current_x0 / 2 + 0.5)
