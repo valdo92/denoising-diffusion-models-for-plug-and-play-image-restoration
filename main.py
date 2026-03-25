@@ -17,14 +17,15 @@ from pnp_denoising_diffusion.utils.diffusion_utils import get_params_diffusion
 
 
 if __name__ == "__main__":
-    print("⏳ Loading config and parameters...")
+    print("⏳ Loading config, parameters and images...")
     config = load_config("config.yaml")
     set_seed(config.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     config.device = device
 
-    print("--- Parameters ---")
     params = get_params_diffusion(config)
+    
+    image = load_image(config.path_to_image) # [256, 256, 3]
 
     image = load_image(config.path_to_image)  # [H, W, 3]
     h, w = image.shape[:2]
@@ -70,6 +71,8 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(config.model_path, map_location="cpu"))
     model = model.to(device)
     model.eval()
+    for param in model.parameters():
+        param.requires_grad = False
     
     # TODO: peut être que l'on peut garder uniquement un config.skip_type ici non ?
 
