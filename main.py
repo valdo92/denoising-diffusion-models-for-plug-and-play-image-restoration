@@ -61,6 +61,14 @@ if __name__ == "__main__":
             image, image_transformed, mask, config.device
             )
         y = image_transformed
+        
+        # EXPERIMENT 2: Add specific noise to the known observation to test PGD robustness
+        if config.get("add_observation_noise", False):
+            noise_std = config.get("observation_noise_std", 0.1)
+            # Add noise only on the visible part
+            y = y + torch.randn_like(y) * noise_std * mask
+            y = y.clamp(-1.0, 1.0)
+
         x = initialize_x(params, config, y)
 
         img_name = os.path.basename(img_path).split('.')[0]
