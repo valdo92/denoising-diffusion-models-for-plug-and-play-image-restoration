@@ -24,7 +24,7 @@ def get_params_diffusion(config):
     t_start = config.num_train_timesteps - 1 
     
         # create sequence of timestep for sampling
-    seq = np.sqrt(np.linspace(0, config.num_train_timesteps**2, config.iter_num))
+    seq = np.sqrt(np.linspace(0, int(config.num_train_timesteps**2), int(config.iter_num)))
     seq = [int(s) for s in list(seq)]
     seq[-1] = seq[-1] - 1
     progress_seq = seq[::(len(seq)//10)]

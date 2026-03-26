@@ -49,7 +49,7 @@ if __name__ == "__main__":
     image_paths = [os.path.join(config.image_dir, fname) for fname in image_filenames]
     lpips_scores = []
     
-    for img_path in image_paths:
+    for img_path in image_paths[:10]:
         print(f"\n--- Processing {img_path} ---")
         config.path_to_image = img_path
         
@@ -67,6 +67,17 @@ if __name__ == "__main__":
             noise_std = config.get("observation_noise_std", 0.1)
             # Add noise only on the visible part
             y = y + torch.randn_like(y) * noise_std * mask
+            y = y.clamp(-1.0, 1.0)
+
+                # EXPERIMENT: Add Color Shift Bias to test Elasticity (PGD superiority)
+        if config.get("add_color_shift", False):
+            # Assombrit et "rougit" significativement l'image (déséquilibre distributionnel)
+            y_shifted = y.clone()
+            y_shifted[:, 0, :, :] = y_shifted[:, 0, :, :] * 1.5  # Boost le canal R
+            y_shifted[:, 1, :, :] = y_shifted[:, 1, :, :] * 0.4  # Baisse le canal V
+            y_shifted[:, 2, :, :] = y_shifted[:, 2, :, :] * 0.4  # Baisse le canal B
+            # On applique ça uniquement sur la partie visible
+            y = y_shifted * mask + y * (1 - mask)
             y = y.clamp(-1.0, 1.0)
 
         x = initialize_x(params, config, y)

@@ -6,21 +6,21 @@ feature: 2048
 
 seed: 42
 image_list_file: data/ffhq_100_val.txt
-image_dir: data/ffhq_100_val/69000
-name_folder_result: ffhq_pgd_100
-output_csv: metrics.csv
+image_dir: data/ffhq_100_val/validation
+name_folder_result: results_EXP3_PGD_fast_iter20_gamma_20
+output_csv: metrics_EXP3_PGD_fast_iter20_gamma_20.csv
 model_path: model/ffhq_10m.pt
 
 sigma                   : 0.001  # noise level associated with condition y
-lambda_                 : 6.               # key parameter lambda            # use analytical solution
+lambda_                 : 1.               # key parameter lambda            # use analytical solution
 eta                     : 0.0               # eta for ddim samplingn  
 zeta                    : 1.
 guidance_scale          : 1.0   
 # Choix de la methode Plug-and-Play
-pnp_method              : 'pgd'           # 'hqs' ou 'pgd' (inclut nativement le gamma dynamique de DPS)
-gamma_pgd               : 50.0             # taille du pas gradient (utilisé si pnp_method='pgd')
+pnp_method              : 'pgd'
+gamma_pgd               : 20.0
 num_train_timesteps     : 1000
-iter_num                : 100        # set number of iterations
+iter_num                : 20
 
 
 # noise schedule 
@@ -54,3 +54,7 @@ guided_diffusion:
   use_checkpoint: False
   image_size: 256
   dropout: 0.
+
+add_observation_noise: False
+observation_noise_std: 0.1
+add_color_shift: False
