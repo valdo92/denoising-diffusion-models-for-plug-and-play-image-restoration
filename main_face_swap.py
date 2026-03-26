@@ -18,8 +18,8 @@ from pnp_denoising_diffusion.utils.diffusion_utils import (
 if __name__ == "__main__":
     print("⏳ Loading config, parameters and images...")
     config = load_config("config_face_swap.yaml")
-    if os.path.exists("results/" + config.name_folder_result):
-       raise FileExistsError(f"🛑 : The folder '{config.name_folder_result}' exist, change it in config or delete the folder")
+    # if os.path.exists("results/" + config.name_folder_result):
+    #    raise FileExistsError(f"🛑 : The folder '{config.name_folder_result}' exist, change it in config or delete the folder")
     os.makedirs(f"results/{config.name_folder_result}", exist_ok=True)
     set_seed(config.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -78,11 +78,10 @@ if __name__ == "__main__":
             x_show = np.squeeze(x_show)
             if x_show.ndim == 3:
                 x_show = np.transpose(x_show, (1, 2, 0))
-            #imshow(x_show, title=f'Denoised Image {i}', save_path=f"results/{config.name_folder_result}/{img_name}_etape_{i}.png", show=False)
+            imshow(x_show, title=f'Denoised Image {i}', save_path=f"results/{config.name_folder_result}/etape_{i}.png", show=False)
             progress_img.append(x_show)
         torch.cuda.empty_cache()
 
-    x[mask.to(torch.bool)] = y[mask.to(torch.bool)]
     imshow(x, title='final_image', save_path=f"results/{config.name_folder_result}/final_image.png", show=False)
     y_vis = (y / 2 + 0.5).clamp(0, 1).squeeze().cpu().numpy().transpose(1, 2, 0)
     x_vis = (x / 2 + 0.5).clamp(0, 1).squeeze().cpu().numpy().transpose(1, 2, 0)

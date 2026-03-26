@@ -5,21 +5,21 @@ noise_level_img: 0.
 feature: 2048
 
 seed: 42
-name_image_1: piche.png
-name_image_2: piche2.png
-name_folder_result: face_swap_try 
+name_image_2: valentin_fm.png
+name_image_1: hugo_fm.png
+name_folder_result: face_swap_try_2
 output_csv: metrics.csv
 model_path: model/ffhq_10m.pt
 
-omega: 0.5 # the weights of image_1
+omega: 0. # the weights of image_1
 sigma                   : 0.001  # noise level associated with condition y
-lambda_                 : 6.               # key parameter lambda            # use analytical solution
+lambda_                 : 800000.               # key parameter lambda            # use analytical solution
 eta                     : 0.0               # eta for ddim samplingn  
-zeta                    : 1.
+zeta                    : 0.3
 guidance_scale          : 1.0   
 
 num_train_timesteps     : 1000
-iter_num                : 20            # set number of iterations
+iter_num                : 500            # set number of iterations
 
 
 # noise schedule 
