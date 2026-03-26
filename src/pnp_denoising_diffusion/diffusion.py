@@ -83,7 +83,7 @@ def single_diffpir_step(x, y, mask, t_i, t_im1, model_fn, rhos, sigmas, alphas_c
         # Pas de gradient dynamique calculé pour ce timestep
         gamma_t = gamma / (norm_error + 1e-6)
         x0_p = x0_hat - gamma_t * error
-
+        x0_p = x0_p.clamp(-1.0, 1.0) # SAUVEGARDE CONTRE L'EXPLOSION
     else:
         raise ValueError(f"Méthode PnP inconnue: {pnp_method}. Choisissez 'hqs' ou 'pgd'.")
 

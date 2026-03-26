@@ -40,7 +40,7 @@ if __name__ == "__main__":
     config.path_output_csv = "results/" + config.name_folder_result + "/" + config.output_csv
     with open(config.path_output_csv, mode='a', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['image_name', 'psnr_global', 'psnr_known', 'psnr_generated', 'boundary_tv', 'lpips'])
+        writer.writerow(['image_name'+str(config.gamma_pgd), 'psnr_global', 'psnr_known', 'psnr_generated', 'boundary_tv', 'lpips'])
 
     # Read image list from text file
     with open(config.image_list_file, 'r') as f:
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     image_paths = [os.path.join(config.image_dir, fname) for fname in image_filenames]
     lpips_scores = []
     
-    for img_path in image_paths[:5]:
+    for img_path in image_paths:
         print(f"\n--- Processing {img_path} ---")
         config.path_to_image = img_path
         
@@ -90,7 +90,6 @@ if __name__ == "__main__":
             # -------------------------------------------------------
             if i < (config.num_train_timesteps - config.noise_model_t):
                 pnp_method = config.get('pnp_method', 'hqs')
-                print(pnp_method)
                 gamma = config.get('gamma_pgd', 1.0)
                 
                 x_next, x0_est = single_diffpir_step(
@@ -115,7 +114,7 @@ if __name__ == "__main__":
             torch.cuda.empty_cache()
 
         x[mask.to(torch.bool)] = y[mask.to(torch.bool)]
-        imshow(x, title='final_image', save_path=f"results/{config.name_folder_result}/{img_name}_final_image.png", show=False)
+        imshow(x, title='final_image', save_path=f"results/{config.name_folder_result}/{img_name}_final_image_{gamma}.png", show=False)
         y_vis = (y / 2 + 0.5).clamp(0, 1).squeeze().cpu().numpy().transpose(1, 2, 0)
         x_vis = (x / 2 + 0.5).clamp(0, 1).squeeze().cpu().numpy().transpose(1, 2, 0)
         image_vis = (image / 2 + 0.5).clamp(0, 1).squeeze().cpu().numpy().transpose(1, 2, 0)
@@ -126,7 +125,7 @@ if __name__ == "__main__":
             image_vis
         ], axis=1)
         imshow(composite, title='Comparison: Transformed | Denoised | Original', 
-               save_path=f"results/{config.name_folder_result}/{img_name}_comparison.png", show=False)
+               save_path=f"results/{config.name_folder_result}/{img_name}_comparison_{gamma}.png", show=False)
 
         # Run evaluation and accumulate FID features
         metrics = run_evaluation(x, image, mask, config, device, fid_scorer=fid_scorer)

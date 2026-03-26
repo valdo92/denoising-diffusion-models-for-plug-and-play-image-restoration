@@ -7,7 +7,7 @@ feature: 2048
 seed: 42
 image_list_file: data/ffhq_100_val.txt
 image_dir: data/ffhq_100_val/69000
-name_folder_result: ffhq_pgd_20
+name_folder_result: ffhq_pgd_100
 output_csv: metrics.csv
 model_path: model/ffhq_10m.pt
 
@@ -17,10 +17,10 @@ eta                     : 0.0               # eta for ddim samplingn
 zeta                    : 1.
 guidance_scale          : 1.0   
 # Choix de la methode Plug-and-Play
-pnp_method              : 'hqs'           # 'hqs' ou 'pgd' (inclut nativement le gamma dynamique de DPS)
-gamma_pgd               : 1.0             # taille du pas gradient (utilisé si pnp_method='pgd')
+pnp_method              : 'pgd'           # 'hqs' ou 'pgd' (inclut nativement le gamma dynamique de DPS)
+gamma_pgd               : 50.0             # taille du pas gradient (utilisé si pnp_method='pgd')
 num_train_timesteps     : 1000
-iter_num                : 20            # set number of iterations
+iter_num                : 100        # set number of iterations
 
 
 # noise schedule 
