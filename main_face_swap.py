@@ -3,6 +3,7 @@
 import torch
 import numpy as np
 import os
+import yaml
 from pnp_denoising_diffusion.utils.utils import load_config, set_seed
 from pnp_denoising_diffusion.utils import utils_model 
 from pnp_denoising_diffusion.utils.load_image import load_image
@@ -22,7 +23,8 @@ if __name__ == "__main__":
     # if os.path.exists("results/" + config.name_folder_result):
     #    raise FileExistsError(f"🛑 : The folder '{config.name_folder_result}' exist, change it in config or delete the folder")
     os.makedirs(f"results/{config.name_folder_result}", exist_ok=True)
-    os.system(f"cp config_face_swap.yaml results/{config.name_folder_result}/")
+    with open(f"results/{config.name_folder_result}/config_face_swap.yaml", "w") as f:
+        yaml.safe_dump(config.to_dict(), f, sort_keys=False, allow_unicode=True)
     set_seed(config.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     config.device = device
@@ -97,3 +99,4 @@ if __name__ == "__main__":
     ], axis=1)
     imshow(composite, title='Comparison: Image 1 | Image 2 | Result', 
            save_path=f"results/{config.name_folder_result}/comparison.png", show=False)
+    
