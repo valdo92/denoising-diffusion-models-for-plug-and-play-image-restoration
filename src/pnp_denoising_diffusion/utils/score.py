@@ -40,6 +40,71 @@ def calculate_psnr(img1, img2, border=0):
         return float('inf')
     return 20 * math.log10(255.0 / math.sqrt(mse))
 
+def calculate_masked_psnr(img1, img2, mask_np):
+    """
+    Calcule le PSNR en utilisant uniquement les pixels indiqués par le masque.
+    mask_np: numpy array de forme (H, W, C) avec des 1 pour inclure, 0 pour exclure.
+    """
+    if img1.shape != img2.shape or img1.shape != mask_np.shape:
+        raise ValueError('Images and mask must have the same dimensions.')
+    
+    img1 = img1.astype(np.float64)
+    img2 = img2.astype(np.float64)
+    
+    # Récupérer l'erreur au carré uniquement sur la zone intéressée
+    sq_err = ((img1 - img2) ** 2) * mask_np
+    
+    # Nombre de pixels actifs (multiplié par les canaux)
+    nb_active_pixels = np.sum(mask_np)
+    
+    if nb_active_pixels == 0:
+        return 0.0 # Évite la division par zéro si la zone est vide
+        
+    mse = np.sum(sq_err) / nb_active_pixels
+    
+    if mse == 0:
+        return float('inf')
+    return 20 * math.log10(255.0 / math.sqrt(mse))
+
+def calculate_boundary_tv(img, mask_np):
+    """
+    Calcule la Variation Totale (TV) uniquement à la frontière du masque.
+    Une TV élevée à la frontière traduit une "couture" ou un bord abrupt.
+    img: image [H, W, C] dans [0, 255]
+    mask_np: masque [H, W, C] ou [H, W, 1] valant 1 (connu) et 0 (généré)
+    """
+    # Réduire le masque en 2D pour les opérations morphologiques
+    mask_2d = mask_np[:, :, 0] if mask_np.ndim == 3 else mask_np
+    mask_2d = mask_2d.astype(np.uint8)
+    
+    # Trouver la frontière en dilatant le masque et en soustrayant le masque "érodé" (ou l'original)
+    kernel = np.ones((3, 3), np.uint8)
+    dilated_mask = cv2.dilate(mask_2d, kernel, iterations=1)
+    eroded_mask = cv2.erode(mask_2d, kernel, iterations=1)
+    boundary_mask = dilated_mask - eroded_mask # 1 sur la bordure étroite, 0 ailleurs
+    
+    # Ramener la boundary_mask en 3 dimensions pour filtrer l'image
+    boundary_mask_3d = np.expand_dims(boundary_mask, axis=2) if mask_np.ndim == 3 else boundary_mask
+    
+    img_f = img.astype(np.float32)
+    # Calculer les gradients de l'image en X et Y
+    diff_x = np.abs(img_f[:, 1:, :] - img_f[:, :-1, :])
+    diff_y = np.abs(img_f[1:, :, :] - img_f[:-1, :, :])
+    
+    # Pad pour retrouver la taille originale H, W
+    diff_x = np.pad(diff_x, ((0, 0), (0, 1), (0, 0)), mode='constant')
+    diff_y = np.pad(diff_y, ((0, 1), (0, 0), (0, 0)), mode='constant')
+    
+    total_variation_map = diff_x + diff_y
+    
+    # Somme des gradients uniquement sur la zone de frontière, divisée par le nb de pixels frontaliers
+    nb_boundary_pixels = np.sum(boundary_mask_3d)
+    if nb_boundary_pixels == 0:
+        return 0.0
+        
+    tv_on_boundary = np.sum(total_variation_map * boundary_mask_3d) / nb_boundary_pixels
+    return float(tv_on_boundary)
+
 # def calculate_psnr_batch(batch1, batch2, max_pixel=2.0, eps=1e-10):
 #     if not batch1.shape == batch2.shape:
 #         raise ValueError('Input images must have the same dimensions.')
