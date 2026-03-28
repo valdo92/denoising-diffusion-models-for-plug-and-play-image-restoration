@@ -67,7 +67,8 @@ poetry run python main.py
 
 TO DO:
 
-- [ ] faire une comparaison des photos avec le leur
-- [ ] faire le face swap
-- [ ] faire le changement d'algo
-- [ ] écrire le rapport
+- [x] pouvoir save le config
+- [ ] faire l'expérience sur la valeur de lambda
+- [ ] faire l'expérience sur la diffusion
+- [ ] faire varier omega avec les meilleurs valeurs
+- [ ] mettre ça dans le rapport

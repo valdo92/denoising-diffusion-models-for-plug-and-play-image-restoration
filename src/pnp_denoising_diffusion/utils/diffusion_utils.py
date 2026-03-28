@@ -69,6 +69,13 @@ def transfer_model_shape(image, image_transformed, mask, device):
     return image, image_transformed, mask
 
 
+def transfer_model_shape_one_image(image, device):
+    """Transfer the images to the model shape"""
+    image = torch.from_numpy(image).permute(2, 0, 1).float().unsqueeze(0).to(device)
+    image = image * 2.0 - 1.0  # [0, 1] -> [-1, 1]
+    return image
+
+
 def initialize_x(params, config, y):
     """Change the transformed image y in initial state for diffusion"""
     t_y = utils_model.find_nearest(
