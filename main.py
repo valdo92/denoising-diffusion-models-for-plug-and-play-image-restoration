@@ -23,8 +23,8 @@ from pnp_denoising_diffusion.utils.diffusion_utils import (
 if __name__ == "__main__":
     print("⏳ Loading config, parameters and images...")
     config = load_config("config.yaml")
-    if os.path.exists("results/" + config.name_folder_result):
-       raise FileExistsError(f"🛑 : The folder '{config.name_folder_result}' exist, change it in config or delete the folder")
+    #if os.path.exists("results/" + config.name_folder_result):
+    #   raise FileExistsError(f"🛑 : The folder '{config.name_folder_result}' exist, change it in config or delete the folder")
     os.makedirs(f"results/{config.name_folder_result}", exist_ok=True)
     set_seed(config.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     config.path_output_csv = "results/" + config.name_folder_result + "/" + config.output_csv
     with open(config.path_output_csv, mode='a', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['image_name', 'psnr', 'lpips'])
+        writer.writerow(['image_name'+str(config.gamma_pgd), 'psnr_global', 'psnr_known', 'psnr_generated', 'boundary_tv', 'lpips'])
 
     # Read image list from text file
     with open(config.image_list_file, 'r') as f:
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     image_paths = [os.path.join(config.image_dir, fname) for fname in image_filenames]
     lpips_scores = []
     
-    for img_path in image_paths:
+    for img_path in image_paths[:10]:
         print(f"\n--- Processing {img_path} ---")
         config.path_to_image = img_path
         
@@ -61,6 +61,25 @@ if __name__ == "__main__":
             image, image_transformed, mask, config.device
             )
         y = image_transformed
+        
+        # EXPERIMENT 2: Add specific noise to the known observation to test PGD robustness
+        if config.get("add_observation_noise", False):
+            noise_std = config.get("observation_noise_std", 0.1)
+            # Add noise only on the visible part
+            y = y + torch.randn_like(y) * noise_std * mask
+            y = y.clamp(-1.0, 1.0)
+
+                # EXPERIMENT: Add Color Shift Bias to test Elasticity (PGD superiority)
+        if config.get("add_color_shift", False):
+            # Assombrit et "rougit" significativement l'image (déséquilibre distributionnel)
+            y_shifted = y.clone()
+            y_shifted[:, 0, :, :] = y_shifted[:, 0, :, :] * 1.5  # Boost le canal R
+            y_shifted[:, 1, :, :] = y_shifted[:, 1, :, :] * 0.4  # Baisse le canal V
+            y_shifted[:, 2, :, :] = y_shifted[:, 2, :, :] * 0.4  # Baisse le canal B
+            # On applique ça uniquement sur la partie visible
+            y = y_shifted * mask + y * (1 - mask)
+            y = y.clamp(-1.0, 1.0)
+
         x = initialize_x(params, config, y)
 
         img_name = os.path.basename(img_path).split('.')[0]
@@ -89,8 +108,12 @@ if __name__ == "__main__":
             # SOLUTION ANALYTIQUE ET SAUT DDIM (DiffPIR)
             # -------------------------------------------------------
             if i < (config.num_train_timesteps - config.noise_model_t):
+                pnp_method = config.get('pnp_method', 'hqs')
+                gamma = config.get('gamma_pgd', 1.0)
+                
                 x_next, x0_est = single_diffpir_step(
-                    x, y, mask, t_i, t_im1, model, params.rhos, params.sigmas, params.alphas_cumprod, config.guidance_scale, zeta = config.zeta
+                    x, y, mask, t_i, t_im1, model, params.rhos, params.sigmas, params.alphas_cumprod, 
+                    config.guidance_scale, zeta=config.zeta, pnp_method=pnp_method, gamma=gamma
                 )
                 x = x_next
             else:
@@ -110,7 +133,7 @@ if __name__ == "__main__":
             torch.cuda.empty_cache()
 
         x[mask.to(torch.bool)] = y[mask.to(torch.bool)]
-        imshow(x, title='final_image', save_path=f"results/{config.name_folder_result}/{img_name}_final_image.png", show=False)
+        imshow(x, title='final_image', save_path=f"results/{config.name_folder_result}/{img_name}_final_image_{gamma}.png", show=False)
         y_vis = (y / 2 + 0.5).clamp(0, 1).squeeze().cpu().numpy().transpose(1, 2, 0)
         x_vis = (x / 2 + 0.5).clamp(0, 1).squeeze().cpu().numpy().transpose(1, 2, 0)
         image_vis = (image / 2 + 0.5).clamp(0, 1).squeeze().cpu().numpy().transpose(1, 2, 0)
@@ -121,24 +144,31 @@ if __name__ == "__main__":
             image_vis
         ], axis=1)
         imshow(composite, title='Comparison: Transformed | Denoised | Original', 
-               save_path=f"results/{config.name_folder_result}/{img_name}_comparison.png", show=False)
+               save_path=f"results/{config.name_folder_result}/{img_name}_comparison_{gamma}.png", show=False)
 
         # Run evaluation and accumulate FID features
-        metrics = run_evaluation(x, image, config, device, fid_scorer=fid_scorer)
+        metrics = run_evaluation(x, image, mask, config, device, fid_scorer=fid_scorer)
         lpips_scores.append(metrics['lpips'])
         
         with open(config.path_output_csv, mode='a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([os.path.basename(img_path), f"{metrics['psnr']:.2f}", f"{metrics['lpips']:.4f}"])
+            writer.writerow([
+                os.path.basename(img_path), 
+                f"{metrics['psnr_global']:.2f}",
+                f"{metrics['psnr_known']:.2f}",
+                f"{metrics['psnr_generated']:.2f}",
+                f"{metrics['boundary_tv']:.2f}",
+                f"{metrics['lpips']:.4f}"
+            ])
 
-        print(f"✅ Finish {img_path}! PSNR: {metrics['psnr']:.2f}, LPIPS: {metrics['lpips']:.4f}")
+        print(f"✅ Finish {img_path} for {config.pnp_method}! PSNR Global: {metrics['psnr_global']:.2f} | PSNR Known: {metrics['psnr_known']:.2f} | PSNR Gen: {metrics['psnr_generated']:.2f} | TV: {metrics['boundary_tv']:.2f} | LPIPS: {metrics['lpips']:.4f}")
 
     if lpips_scores:
         mean_lpips = float(np.mean(lpips_scores))
         print(f"🌟 Mean LPIPS over the dataset: {mean_lpips:.4f}")
         with open(config.path_output_csv, mode='a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['MEAN_LPIPS', '', f"{mean_lpips:.4f}"])
+            writer.writerow(['MEAN_LPIPS', '', '', '', '', f"{mean_lpips:.4f}"])
 
     # Compute global FID score after all images are processed
     print("\n⏳ Computing final FID score over the whole dataset...")
@@ -148,6 +178,6 @@ if __name__ == "__main__":
         # Optionally append the globally computed FID to the CSV
         with open(config.path_output_csv, mode='a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['GLOBAL_FID', f"{final_fid_score:.4f}", ''])
+            writer.writerow(['GLOBAL_FID', f"{final_fid_score:.4f}", '', '', '', ''])
     except Exception as e:
         print(f"⚠️ Could not compute FID (maybe not enough images?): {e}")

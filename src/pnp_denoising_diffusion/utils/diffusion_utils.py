@@ -5,7 +5,7 @@ import numpy as np
 from pnp_denoising_diffusion.utils import utils_model 
 from pnp_denoising_diffusion.guided_diffusion.script_util import create_model_and_diffusion
 import lpips
-from pnp_denoising_diffusion.utils.score import calculate_psnr, calculate_fid_process
+from pnp_denoising_diffusion.utils.score import calculate_psnr, calculate_fid_process, calculate_masked_psnr, calculate_boundary_tv
 from pnp_denoising_diffusion.utils.read_image import read_and_save
 import os
 import csv
@@ -24,7 +24,7 @@ def get_params_diffusion(config):
     t_start = config.num_train_timesteps - 1 
     
         # create sequence of timestep for sampling
-    seq = np.sqrt(np.linspace(0, config.num_train_timesteps**2, config.iter_num))
+    seq = np.sqrt(np.linspace(0, int(config.num_train_timesteps**2), int(config.iter_num)))
     seq = [int(s) for s in list(seq)]
     seq[-1] = seq[-1] - 1
     progress_seq = seq[::(len(seq)//10)]
@@ -100,9 +100,9 @@ def load_diffusion_model(config):
     return model
 
 
-def run_evaluation(x_final, image_gt, config, device, fid_scorer=None):
+def run_evaluation(x_final, image_gt, mask_tensor, config, device, fid_scorer=None):
     """
-    Calcule les métriques (PSNR, LPIPS) pour une image, 
+    Calcule les métriques (PSNR, LPIPS, et métriques segmentées) pour une image, 
     et accumule les features pour le FID global si fid_scorer est fourni.
     """
 
@@ -113,7 +113,16 @@ def run_evaluation(x_final, image_gt, config, device, fid_scorer=None):
 
     img_psnr_gt = np.transpose(img_gt_uint8.squeeze(0).cpu().numpy(), (1, 2, 0))
     img_psnr_est = np.transpose(img_est_uint8.squeeze(0).cpu().numpy(), (1, 2, 0))
+    
+    # Masque en numpy array [H, W, C] contenant des 1.0 (pixels connus) et 0.0 (pixels manquants)
+    mask_np = mask_tensor.squeeze(0).permute(1, 2, 0).cpu().numpy()
+    
     psnr_score = calculate_psnr(img_psnr_gt, img_psnr_est)
+    psnr_known = calculate_masked_psnr(img_psnr_gt, img_psnr_est, mask_np)
+    psnr_generated = calculate_masked_psnr(img_psnr_gt, img_psnr_est, 1.0 - mask_np)
+    
+    # Variation Totale sur les Coutures (Frontière du masque)
+    boundary_tv = calculate_boundary_tv(img_psnr_est, mask_np)
 
     loss_fn_vgg = lpips.LPIPS(net='vgg').to(device)
     lpips_score = loss_fn_vgg(x_final.detach(), image_gt).item()
@@ -126,6 +135,9 @@ def run_evaluation(x_final, image_gt, config, device, fid_scorer=None):
         fid_scorer.update(img_est_uint8, real=False)
     
     return {
-        "psnr": psnr_score,
+        "psnr_global": psnr_score,
+        "psnr_known": psnr_known,
+        "psnr_generated": psnr_generated,
+        "boundary_tv": boundary_tv,
         "lpips": lpips_score
     }
