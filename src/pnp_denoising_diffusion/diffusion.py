@@ -41,11 +41,7 @@ def simple_diffusion_step(model, x_t, t_i, t_im1, alphas_cumprod, eta=0.0):
 
     return x_prev, eps_pred
 
-def single_diffpir_step(
-        x, y, mask, t_i, t_im1, model_fn, rhos, sigmas, alphas_cumprod,
-        guidance_scale, eta=0.0, zeta=0.0, face_swap=False
-        ):
-def single_diffpir_step(x, y, mask, t_i, t_im1, model_fn, rhos, sigmas, alphas_cumprod, guidance_scale, eta=0.0, zeta=0.0, pnp_method='hqs', gamma=1.0):
+def single_diffpir_step(x, y, mask, t_i, t_im1, model_fn, rhos, sigmas, alphas_cumprod, guidance_scale, eta=0.0, zeta=0.0, pnp_method='hqs', gamma=1.0, face_swap=False):
     # 1. Prédire le bruit (epsilon) via le modèle
     # Résolution de l'hypothèse de la prédiction directe : on suppose que model_fn prédit epsilon
     # (Si votre modèle nécessite "noise_level" ou autre, vous pouvez l'encapsuler dans model_fn)
@@ -71,14 +67,14 @@ def single_diffpir_step(x, y, mask, t_i, t_im1, model_fn, rhos, sigmas, alphas_c
 
     # 2. Solution Analytique (Le cœur de DiffPIR)
     # On force la cohérence avec l'image dégradée y (Inpainting)
-    if not face_swap:
-        x0_p = (mask * y + rhos[t_i] * x0_hat) / (mask + rhos[t_i])
-    else:
-        x0_p = (y + rhos[t_i] * x0_hat) / (1 + rhos[t_i])
     # 2. Correction selon la méthode PnP choisie
     if pnp_method.lower() == 'hqs':
         # --- Half-Quadratic Splitting (HQS) ---
         # Solution analytique exacte pondérée par rho
+        if not face_swap:
+            x0_p = (mask * y + rhos[t_i] * x0_hat) / (mask + rhos[t_i])
+        else:
+            x0_p = (y + rhos[t_i] * x0_hat) / (1 + rhos[t_i])
         x0_p = (mask * y + rhos[t_i] * x0_hat) / (mask + rhos[t_i])
     
     elif pnp_method.lower() == 'pgd':
